@@ -9,6 +9,5 @@ dist/
 build/
 *.db
 
-
 # this is for the DS_Store files
 .DS_Store
