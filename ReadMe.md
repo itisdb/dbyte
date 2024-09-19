@@ -1,4 +1,5 @@
-** Things to Do
+## **Things to Do**
+--------------------------------
 - Create a FastAPI with vercel ❌ -> this doesnt work as for normal serverless functions it has a file limit for 3MB and the calling time for the function needs to be low. Which is problematic when we are going for any AI model as well.
 - Need to look for a better way to host this freely. Options are below:
     - cyclic.sh
