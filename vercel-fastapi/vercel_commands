@@ -1,0 +1,9 @@
+** To host to a dev environment
+'''
+vercel .
+'''
+
+** To host to a production environment
+'''
+vercel --prod
+'''

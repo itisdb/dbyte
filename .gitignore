@@ -1,0 +1,8 @@
+# Ignore node_modules directory
+node_modules/
+
+# Ignore venv directory
+venv/
+
+# Ignore __pycache__ directory
+__pycache__/
