@@ -1,12 +1,104 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import JSONResponse, StreamingResponse
+from zipfile import ZipFile
+from io import BytesIO
+import fitz  # PyMuPDF
+from PIL import Image
+import logging
+
+class dbyteException(Exception):
+    pass
 
 app = FastAPI()
 
+from app.logthis import APILogger
+
 @app.get("/")
 async def root():
+    logger = APILogger()
+    logger.log(logging.DEBUG, "Root endpoint accessed")
+
+    del logger
     return {"message": "This is the root of the dbyteAPI"}
+
+@app.get("/error")
+async def get_error_example():
+    logger = APILogger()
+    logger.log(logging.WARNING, "Error endpoint accessed")
+    raise HTTPException(status_code=404, detail="This is a 404 error example")
 
 @app.get("/health_check")
 async def health_check():
-    return {"message": "dbyteAPI is up and running!"}
+    logger = APILogger()
+    logger.log(logging.INFO, "Health check endpoint accessed")
+    try:
+        # Add health check logic here
+        logger.log(logging.DEBUG, "Health check running...")
+        # Simulate health check logic
+        logger.log(logging.INFO, "Health check passed successfully")
+        del logger
+        return {"message": "dbyteAPI is up and running!"}
+    except Exception as e:
+        logger.log(logging.ERROR, f"Health check failed: {e}")
+        del logger
+        raise HTTPException(status_code=500, detail=f"dbyte is unHealthy: {str(e)}")
+    
+@app.post("/pdf2image")
+async def pdf2image(pdffile: UploadFile = File(...)):
+    logger = APILogger()
+    logger.log(logging.INFO, "PDF2Image endpoint accessed")
+    try:
+        # Check for a specific condition to raise custom exception
+        if pdffile.filename.split('.')[-1] != 'pdf':
+            logger.log(logging.ERROR, "Invalid file format provided")
+            raise dbyteException("Invalid file format. Only PDFs are allowed.")
+        
+        logger.log(logging.DEBUG, f"Processing file: {pdffile.filename}")
+        
+        # Convert SpooledTemporaryFile to BytesIO
+        pdf_bytes = await pdffile.read()
+        pdf_stream = BytesIO(pdf_bytes)
+        
+        # Open the PDF from the BytesIO stream
+        pdf_document = fitz.open(stream=pdf_stream, filetype="pdf")
+        logger.log(logging.DEBUG, f"PDF file opened. Number of pages: {len(pdf_document)}")
+        
+        # Create an in-memory ZIP file
+        zip_buffer = BytesIO()
+        with ZipFile(zip_buffer, 'w') as zip_file:
+            # Convert each page to an image (JPEG)
+            for page_num in range(len(pdf_document)):
+                logger.log(logging.DEBUG, f"Processing page {page_num + 1}")
+                page = pdf_document[page_num]
+                pix = page.get_pixmap()
+                
+                # Convert the page pixmap to a PIL Image
+                img_byte_arr = BytesIO(pix.tobytes("jpg"))
+                pil_image = Image.open(img_byte_arr)
+                
+                # Add metadata to the image
+                metadata = {
+                    "Description": "Processed by dbyteAPI"
+                }
+                pil_image.info.update(metadata)
+                
+                # Save the image to a byte stream
+                img_byte_arr = BytesIO()
+                pil_image.save(img_byte_arr, format="JPEG", exif=pil_image.info.get("exif", b""))
+                
+                # Write each image as a JPEG file inside the ZIP
+                zip_file.writestr(f"page_{page_num + 1}.jpg", img_byte_arr.getvalue())
 
+                logger.log(logging.DEBUG, f"Page {page_num + 1} converted and added to ZIP")
+        
+        # Seek to the beginning of the ZIP buffer
+        zip_buffer.seek(0)
+        
+        logger.log(logging.INFO, "ZIP file created successfully. Returning response.")
+        # Return the ZIP file as a streaming response
+        return StreamingResponse(zip_buffer, media_type="application/zip", 
+                                 headers={"Content-Disposition": "attachment; filename=pdf_images.zip"})
+    except Exception as e:
+        logger.log(logging.ERROR, f"PDF2Image Failed ! : {e}")
+        del logger
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
