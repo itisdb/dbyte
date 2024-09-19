@@ -1,5 +1,5 @@
 ##Things to Do
-- Create a FastAPI with vercel
+- Create a FastAPI with vercel ✅
 - API endpoints to create
     - Images to PDf
     - PDF to images
