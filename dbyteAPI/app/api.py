@@ -144,7 +144,7 @@ async def image2pdf(imagefiles: List[UploadFile] = File(...)):
 
         # Return the PDF as a StreamingResponse
         logger.log(logging.INFO, "Returning PDF as a response")
-        return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=image2pdf.pdf"})
+        return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=dbyteimage2pdf.pdf"})
 
     except Exception as e:
         logger.log(logging.ERROR, f"Image2PDF Failed: {e}")

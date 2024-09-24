@@ -1,9 +1,0 @@
-** To host to a dev environment
-'''
-vercel . --logs
-'''
-
-** To host to a production environment
-'''
-vercel --prod --logs
-'''
