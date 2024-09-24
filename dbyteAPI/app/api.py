@@ -33,9 +33,7 @@ async def health_check():
     logger = APILogger()
     logger.log(logging.INFO, "Health check endpoint accessed")
     try:
-        # Add health check logic here
         logger.log(logging.DEBUG, "Health check running...")
-        # Simulate health check logic
         logger.log(logging.INFO, "Health check passed successfully")
         del logger
         return {"message": "dbyteAPI is up and running!"}
