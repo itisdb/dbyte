@@ -5,6 +5,7 @@ from io import BytesIO
 import fitz  # PyMuPDF
 from PIL import Image
 import logging
+from typing import List
 
 class dbyteException(Exception):
     pass
@@ -100,5 +101,58 @@ async def pdf2image(pdffile: UploadFile = File(...)):
                                  headers={"Content-Disposition": "attachment; filename=pdf_images.zip"})
     except Exception as e:
         logger.log(logging.ERROR, f"PDF2Image Failed ! : {e}")
-        del logger
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    finally:
+        logger.log(logging.INFO, "PDF2Image process completed")
+        del logger
+
+@app.post("/image2pdf")
+async def image2pdf(imagefiles: List[UploadFile] = File(...)):
+    logger = APILogger()
+    logger.log(logging.INFO, f"Image2PDF endpoint accessed with {len(imagefiles)} files")
+
+    if len(imagefiles) == 0:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+
+    try:
+        images = []
+        logger.log(logging.INFO, "Processing uploaded images...")
+
+        # Open each uploaded image file
+        for imagefile in imagefiles:
+            logger.log(logging.INFO, f"Reading image file: {imagefile.filename}")
+            image = await imagefile.read()
+            img = Image.open(BytesIO(image))
+            logger.log(logging.INFO, f"Image {imagefile.filename} opened successfully")
+
+            # Convert to RGB mode if the image has an alpha channel (e.g., PNG)
+            if img.mode in ("RGBA", "LA"):
+                logger.log(logging.INFO, f"Converting {imagefile.filename} to RGB mode")
+                img = img.convert("RGB")
+
+            images.append(img)
+
+        # Create an in-memory buffer for the PDF
+        pdf_buffer = BytesIO()
+        logger.log(logging.INFO, "Creating PDF from images...")
+
+        # Save the images as a PDF
+        if images:
+            images[0].save(pdf_buffer, format="PDF", save_all=True, append_images=images[1:])
+
+        # Move the buffer's pointer to the beginning
+        pdf_buffer.seek(0)
+        logger.log(logging.INFO, "PDF created successfully")
+
+        # Return the PDF as a StreamingResponse
+        logger.log(logging.INFO, "Returning PDF as a response")
+        return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=image2pdf.pdf"})
+
+    except Exception as e:
+        logger.log(logging.ERROR, f"Image2PDF Failed: {e}")
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+    finally:
+        logger.log(logging.INFO, "Image2PDF process completed")
+        del logger
+
